@@ -1,0 +1,109 @@
+# bash completion for gconftool-2
+
+# You should put this in /etc/bash_completion.d/ or source it into your ~/.bashrc or ~/.profile
+# to make sure it is loaded when bash starts.
+
+# These functions depend on _filedir being defined.
+# In ubuntu _filedir is defined in /etc/bash_completion
+
+_gconf_keys()
+{
+    local cur prev opts dirs
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    # deal with current words ending with /
+    if [[ $cur = "" ]]; then
+        dirs=($(gconftool-2 --all-dirs /))
+        opts=($(gconftool-2 --all-entries / | cut -f 2 -d " "))
+    elif [[ $cur = */ && $cur != / ]]; then
+        dirs=($(gconftool-2 --all-dirs ${cur:0:-1}))
+        opts=($(gconftool-2 --all-entries ${cur:0:-1} | cut -f 2 -d " "))
+        if [[ $opts ]]; then
+            opts="${opts[@]/#/$cur}"
+        fi
+    else # otherwise
+        dirs=($(gconftool-2 --all-dirs $(dirname $cur)) $(gconftool-2 --all-dirs $cur))
+        opts=($(gconftool-2 --all-entries $cur | cut -f 2 -d " "))
+        if [[ $opts ]]; then
+            opts="${opts[@]/#/$cur/}"
+        else
+            opts=($(gconftool-2 --all-entries $(dirname $cur) | cut -f 2 -d " "))
+            if [[ $opts ]]; then
+                opts="${opts[@]/#/$(dirname $cur)/}"
+            fi
+        fi
+    fi
+    dirs="${dirs[@]/%//}"
+    COMPREPLY=( $(compgen -W "${opts} ${dirs}" -- ${cur}) )
+    return 0 
+}
+
+_gconf_dirs()
+{
+    local cur prev dirs
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    # deal with current words ending with /
+    if [[ $cur = "" ]]; then
+        dirs=($(gconftool-2 --all-dirs /))
+    elif [[ $cur = */ && $cur != / ]]; then
+        dirs=($(gconftool-2 --all-dirs ${cur:0:-1}))
+    else # otherwise
+        dirs=($(gconftool-2 --all-dirs $(dirname $cur)) $(gconftool-2 --all-dirs $cur))
+    fi
+    dirs="${dirs[@]}"
+    COMPREPLY=( $(compgen -W "${dirs}" -- ${cur}) )
+    return 0 
+}
+
+_gconftool2()
+{
+    local cur prev opts dirs keyopts diropts keydiropts noneopts optopts fileopts allopts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    
+    keyopts="-s --set -g --get -u --unset --toggle --short-docs --long-docs -T --get-type --get-list-size --get-list-element --break-key --set-schema --short-desc --long-desc --get-schema-name --apply-schema --unapply-schema"
+    diropts="-a --all-entries --all-dirs -R --recursive-list --dir-exists --dump --break-directory"
+    keydiropts="--recursive-unset"
+    noneopts="-h --help --help-all --help-client --help-key-type --help-load --help-server --help-install --help-test --help-schema -S --search-key --search-key-regex --get-default-source --shutdown -p --ping --spawn --owner -v --version"
+    optopts="--ignore-schema-defaults -t --type --list-type --car-type --cdr-type --direct"
+    fileopts="--load --unload --install-schema-file= --config-source= --makefile-install-rule --makefile-uninstall-rule"
+    allopts="$keyopts $diropts $keydiropts $noneopts $optopts $fileopts"
+    case "$prev" in
+        @(${keyopts// /|}))
+            _gconf_keys
+            return 0
+            ;;
+        @(${diropts// /|}))
+            _gconf_dirs
+            return 0
+            ;;
+        @(${keydiropts// /|}))
+            _gconf_keys
+            return 0
+            ;;
+        @(${noneopts// /|}))
+            return 0
+            ;;
+        @(${fileopts// /|}))
+            _filedir
+            return 0
+            ;;
+        @(${optopts// /|}))
+            COMPREPLY=( $(compgen -W "$allopts" -- ${cur}) )
+            return 0
+            ;;
+        *)
+            COMPREPLY=( $(compgen -W "$allopts" -- ${cur}) )
+            return 0
+            ;;
+    esac
+}
+# make sure no space is added to end of completion candidates (-o nospace)
+# so that we can easily complete key paths
+complete -F _gconftool2 -o nospace gconftool-2
+
+#  /* Local Variables:  */
+#  /* mode:shell-script */
+#  /* End:              */
